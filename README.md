@@ -1,6 +1,16 @@
-> **ScreenShield fork.** This fork hides T3 Code's windows (and taskbar button) from screen capture and screen
-> sharing. **Windows only for now**; on Linux the app runs but the window stays visible to screen sharing.
+> # ⚠️ UNOFFICIAL FORK — NOT T3 CODE
+>
+> **This is an unofficial, third-party fork of the T3 Code source code. It is _not_ T3 Code, it is _not_
+> affiliated with, endorsed by, sponsored by, or maintained by T3 Tools, Inc., and it is _not_ an official
+> version of T3 Code.** Any T3 name, logo or icon you see below belongs to T3 Tools, Inc. and appears only because
+> this is a copy of their repository. If you want the real T3 Code, get it only from the official channels:
+> [t3.codes](https://t3.codes) and [github.com/pingdotgg/t3code](https://github.com/pingdotgg/t3code).
+> Do not report problems with this fork to T3 Tools, Inc.
+>
+> **What this fork is:** "ScreenShield", an experiment that hides the app's windows from screen capture and screen
+> sharing. **Windows only for now**; on Linux the window stays visible to screen sharing.
 > See [SCREENSHIELD.md](./SCREENSHIELD.md) for downloads, how it works, Linux notes and build instructions.
+> See T3's [TRADEMARK.md](./TRADEMARK.md) for their branding policy.
 
 <p align="center">
   <a href="https://t3.codes">

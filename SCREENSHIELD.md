@@ -1,6 +1,17 @@
-# T3 Code ScreenShield
+# ScreenShield (unofficial fork of T3 Code)
 
-A fork of [T3 Code](https://github.com/pingdotgg/t3code) whose windows are **hidden from screen capture and
+> ## ⚠️ Unofficial. Not T3 Code.
+>
+> **ScreenShield is an unofficial, third-party fork based on the T3 Code source code. It is not T3 Code and is not
+> affiliated with, endorsed by, sponsored by, or maintained by T3 Tools, Inc.** It is not an official version of T3
+> Code. Problems with it must not be reported to T3 Tools, Inc. The official T3 Code is available only from
+> [t3.codes](https://t3.codes) and [github.com/pingdotgg/t3code](https://github.com/pingdotgg/t3code).
+>
+> **Branding status:** T3's [trademark policy](TRADEMARK.md) requires forks to use their own branding. This
+> fork's code, installer, window titles and icons **still contain T3 branding** and have not yet been replaced.
+> Treat this as a private experiment until that is done; do not present it as, or alongside, the official product.
+
+ScreenShield is a fork of the [T3 Code](https://github.com/pingdotgg/t3code) source code whose windows are **hidden from screen capture and
 screen sharing**, as one extra layer of protection for corporate use. When someone shares their screen,
 the T3 window (and its taskbar button) are simply not in the picture.
 
@@ -8,8 +19,9 @@ the T3 window (and its taskbar button) are simply not in the picture.
 > On Linux the app runs normally, but the window is **visible to screen sharing**, and the app says so.
 > See [Linux](#linux) for why, and what could be done.
 
-This is a personal fork, not an official T3 product. The T3 name and branding belong to their owners; see
-[TRADEMARK.md](TRADEMARK.md) before distributing it widely.
+The T3 Code name, wordmark, logos and icons are trademarks of T3 Tools, Inc. and are used here only to describe
+where the source code came from. The code is MIT-licensed (see [LICENSE](LICENSE)); the trademarks are not. Read
+[TRADEMARK.md](TRADEMARK.md) before distributing anything built from this repository.
 
 ---
 
@@ -46,12 +58,12 @@ This is a personal fork, not an official T3 product. The T3 name and branding be
 
 ## Install (Windows)
 
-1. Download `T3-Code-ScreenShield-<version>-x64-windows.exe` from the
+1. Download `ScreenShield-unofficial-<version>-x64-windows.exe` from the
    [Releases page](https://github.com/PeterBredell/t3code-screenshield/releases).
 2. Optionally verify the SHA-256 listed in the release notes (`certutil -hashfile <file> SHA256`).
 3. Run it. The installer is **not code-signed**, so Windows SmartScreen shows an "unknown publisher" warning.
    Click **More info → Run anyway**.
-4. Launch **T3 Code** from the Start menu.
+4. Launch it from the Start menu. It still appears as "T3 Code" because the branding has not been replaced yet.
 
 > This build uses the same app identity as the official T3 Code, so installing it **replaces** an existing
 > official install on the same machine. Give the fork its own app ID and name first if both must coexist.
