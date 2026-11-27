@@ -1,3 +1,7 @@
+> **ScreenShield fork.** This fork hides T3 Code's windows (and taskbar button) from screen capture and screen
+> sharing. **Windows only for now**; on Linux the app runs but the window stays visible to screen sharing.
+> See [SCREENSHIELD.md](./SCREENSHIELD.md) for downloads, how it works, Linux notes and build instructions.
+
 <p align="center">
   <a href="https://t3.codes">
     <img src="./assets/prod/t3-black-web-icon-192x192.png" width="80" height="80" alt="T3 Code logo" />
