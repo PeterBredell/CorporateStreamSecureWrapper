@@ -93,3 +93,298 @@ index 0257098..f166bc3 100644
  export const layerProxyProcess = options => Layer.effectContext(Effect.gen(function* () {
    if (globalThis.process.platform === "win32") {
      return yield* Effect.fail(PlatformError.systemError({
+diff --git a/dist/internal/proxyProcess.js b/dist/internal/proxyProcess.js
+index edd291c..e9bd22e 100644
+--- a/dist/internal/proxyProcess.js
++++ b/dist/internal/proxyProcess.js
+@@ -35,11 +35,12 @@ export class ProxiedProcess extends EventEmitter {
+   proxy;
+   id;
+   pipes;
+-  constructor(proxy, id, pipes) {
++  constructor(proxy, id, pipes, leadsGroup = false) {
+     super();
+     this.proxy = proxy;
+     this.id = id;
+     this.pipes = pipes;
++    this.leadsGroup = leadsGroup;
+     this.stdio = pipes.map(() => null);
+     proxy.ref();
+   }
+@@ -114,16 +115,27 @@ export class ProxiedProcess extends EventEmitter {
+    */
+   onLost(error) {
+     if (this.done) return () => {};
++    // Nothing can observe or reap the command any more, so it is ended rather than left running
++    // unowned: a detached command with its process group, any other by its pid, which is still its
++    // own until the reaper the dead helper left it to collects it.
++    if (this.pid !== undefined && this.pendingExit === undefined) {
++      try {
++        globalThis.process.kill(this.leadsGroup ? -this.pid : this.pid, "SIGKILL");
++      } catch {
++        // It has already exited.
++      }
++    }
+     // A spawn still waiting for its stdio sockets fails, and late sockets are rejected
+     if (!this.spawned) return () => this.onError(error);
+-    this.lost = true;
++    this.signalCode = "SIGKILL";
+     this.finish();
+-    return () => this.emit("lost", error);
++    return () => this.emit("exit", null, "SIGKILL");
+   }
+   emitSpawn() {
+     if (this.spawned || this.pid === undefined) return;
+     if (this.pipes.some((pipe, fd) => pipe && this.stdio[fd] === null)) return;
+     this.spawned = true;
++    this.proxy.stopTimer(this.id);
+     this.emit("spawn");
+     if (this.pendingExit !== undefined) this.onExit(...this.pendingExit);
+   }
+@@ -164,6 +176,7 @@ class Proxy {
+   child;
+   // Bounds the wait for `Ready`, and for the reply to each sent request
+   timers = /*#__PURE__*/new Map();
++  heard = 0;
+   constructor(options) {
+     this.options = options;
+     try {
+@@ -192,7 +205,9 @@ class Proxy {
+       this.pid = this.child.pid;
+       this.child.on("message", message => this.receive(message));
+       this.child.on("error", error => this.end(error));
+-      this.child.on("exit", (code, signal) => this.end(new Error(`The proxy process exited with ${signal === null ? `code ${code}` : `signal ${signal}`}`)));
++      // "close" waits for the IPC channel to drain, so an exit the helper reported before it died
++      // is handled before its commands are counted lost; their pids are only freed by its reaping.
++      this.child.on("close", (code, signal) => this.end(new Error(`The proxy process exited with ${signal === null ? `code ${code}` : `signal ${signal}`}`)));
+       this.startTimer("ready");
+       // The socket path and token are kept out of the arguments, which other
+       // users can read
+@@ -221,7 +236,7 @@ class Proxy {
+     const id = this.nextId;
+     this.nextId = (this.nextId + 1) % 0x1_0000_0000;
+     const stdio = options.stdio.map(mode => mode === undefined || mode === "overlapped" ? "pipe" : mode);
+-    const child = new ProxiedProcess(this, id, stdio.map(mode => mode === "pipe"));
++    const child = new ProxiedProcess(this, id, stdio.map(mode => mode === "pipe"), options.detached === true);
+     this.commands.set(id, child);
+     this.startTimer(id);
+     this.send({
+@@ -244,6 +259,7 @@ class Proxy {
+     this.updateRef();
+   }
+   release(id) {
++    this.stopTimer(id);
+     this.commands.delete(id);
+     if (this.retired && this.commands.size === 0) this.disconnect();
+   }
+@@ -295,21 +311,36 @@ class Proxy {
+   }
+   startTimer(key) {
+     const millis = this.options.responseTimeoutMillis;
+-    const timer = setTimeout(() => {
+-      this.stop(Object.assign(new Error(`The proxy process did not respond within ${millis} ms`), {
+-        code: "ETIMEDOUT"
+-      }));
+-    }, millis);
+-    // Whatever waits for the reply keeps the application running
+-    timer.unref();
+-    this.timers.set(key, timer);
++    const arm = heard => {
++      // A busy application runs due timers before it reads replies that are already waiting, so
++      // the deadline is checked after one more poll, and only silence for a whole window counts.
++      const timer = setTimeout(() => setImmediate(() => {
++        if (this.timers.get(key) !== timer) return;
++        if (this.heard !== heard) return arm(this.heard);
++        this.stop(Object.assign(new Error(`The proxy process did not respond within ${millis} ms`), {
++          code: "ETIMEDOUT"
++        }));
++      }), millis);
++      // Whatever waits for the reply keeps the application running
++      timer.unref();
++      this.timers.set(key, timer);
++    };
++    arm(this.heard);
+   }
+   stopTimer(key) {
+     clearTimeout(this.timers.get(key));
+     this.timers.delete(key);
+   }
+   disconnect() {
+-    if (this.child?.connected === true) this.child.disconnect();
++    const child = this.child;
++    if (child?.connected === true) {
++      // Tells the proxy process that its remaining commands may outlive the application.
++      child.send({
++        _tag: "Detach"
++      }, () => {
++        if (child.connected) child.disconnect();
++      });
++    }
+     this.closeServer();
+   }
+   updateRef() {
+@@ -322,12 +353,13 @@ class Proxy {
+     }
+   }
+   receive(message) {
++    this.heard++;
+     if (message._tag === "Ready") return this.onReady();
+     const command = this.commands.get(message.id);
+     if (command === undefined) return;
+     switch (message._tag) {
+       case "Spawned":
+-        this.stopTimer(message.id);
++        // The deadline stays until the command's pipes arrive too; emitSpawn stops it.
+         return command.onSpawned(message.pid);
+       case "Exit":
+         return command.onExit(message.code, message.signal);
+diff --git a/dist/internal/proxyProcessSource.js b/dist/internal/proxyProcessSource.js
+index 3cd0dab..d672990 100644
+--- a/dist/internal/proxyProcessSource.js
++++ b/dist/internal/proxyProcessSource.js
+@@ -34,6 +34,9 @@ export const run = ()       => {
+   const send = (message        ) => {
+     if (process.connected) process.send?.(message)
+   }
++  // Running commands, which are killed if the application goes away without detaching first.
++  const running = new Map()
++  let detaching = false
+   const serializeError = (error                       ) => ({
+     message: error.message,
+     code: error.code,
+@@ -70,10 +73,20 @@ export const run = ()       => {
+         const errno = (socket                    )._handle?.setBlocking(true)
+         if (errno) throw new Error(\`setBlocking failed: \${Util.getSystemErrorName(errno)}\`)
+       }
++      // An application that went away without detaching could never end this command.
++      if (!process.connected && !detaching) throw new Error("The application has disconnected")
+       const child = ChildProcess.spawn(command, args, { ...options, stdio: values                                  })
+-      child.on("error", (error) => send({ _tag: "Error", id, error: serializeError(error) }))
++      running.set(id, { child, leadsGroup: options.detached === true })
++      child.on("error", (error) => {
++        // A launch that failed has no PID and may not emit "exit".
++        if (child.pid === undefined) running.delete(id)
++        send({ _tag: "Error", id, error: serializeError(error) })
++      })
+       child.on("spawn", () => send({ _tag: "Spawned", id, pid: child.pid }))
+-      child.on("exit", (code, signal) => send({ _tag: "Exit", id, code, signal }))
++      child.on("exit", (code, signal) => {
++        running.delete(id)
++        send({ _tag: "Exit", id, code, signal })
++      })
+     } catch (error) {
+       send({ _tag: "Error", id, error: serializeError(error                         ) })
+     } finally {
+@@ -86,7 +99,21 @@ export const run = ()       => {
+   process.on("SIGINT", () => {})
+   process.on("SIGTERM", () => {})
+   process.once("message", ({ socketPath, token }                                                         ) => {
+-    process.on("message", (request         ) => spawn(socketPath, token, request))
++    process.on("message", (request         ) => {
++      if (request._tag === "Detach") detaching = true
++      else spawn(socketPath, token, request)
++    })
++    // An application that dies cannot release its commands, so they are ended here
++    process.on("disconnect", () => {
++      if (detaching) return
++      for (const { child, leadsGroup } of running.values()) {
++        try {
++          process.kill(leadsGroup ? -child.pid : child.pid, "SIGKILL")
++        } catch {
++          // It has already exited
++        }
++      }
++    })
+     send({ _tag: "Ready" })
+   })
+ }
+diff --git a/dist/internal/proxyProcessWorker.js b/dist/internal/proxyProcessWorker.js
+index 6694313..4276aaa 100644
+--- a/dist/internal/proxyProcessWorker.js
++++ b/dist/internal/proxyProcessWorker.js
+@@ -30,6 +30,9 @@ export const run = () => {
+   const send = message => {
+     if (process.connected) process.send?.(message);
+   };
++  // Running commands, which are killed if the application goes away without detaching first.
++  const running = new Map();
++  let detaching = false;
+   const serializeError = error => ({
+     message: error.message,
+     code: error.code,
+@@ -68,26 +71,39 @@ export const run = () => {
+         const errno = socket._handle?.setBlocking(true);
+         if (errno) throw new Error(`setBlocking failed: ${Util.getSystemErrorName(errno)}`);
+       }
++      // An application that went away without detaching could never end this command.
++      if (!process.connected && !detaching) throw new Error("The application has disconnected");
+       const child = ChildProcess.spawn(command, args, {
+         ...options,
+         stdio: values
+       });
+-      child.on("error", error => send({
+-        _tag: "Error",
+-        id,
+-        error: serializeError(error)
+-      }));
++      running.set(id, {
++        child,
++        leadsGroup: options.detached === true
++      });
++      child.on("error", error => {
++        // A launch that failed has no PID and may not emit "exit".
++        if (child.pid === undefined) running.delete(id);
++        send({
++          _tag: "Error",
++          id,
++          error: serializeError(error)
++        });
++      });
+       child.on("spawn", () => send({
+         _tag: "Spawned",
+         id,
+         pid: child.pid
+       }));
+-      child.on("exit", (code, signal) => send({
+-        _tag: "Exit",
+-        id,
+-        code,
+-        signal
+-      }));
++      child.on("exit", (code, signal) => {
++        running.delete(id);
++        send({
++          _tag: "Exit",
++          id,
++          code,
++          signal
++        });
++      });
+     } catch (error) {
+       send({
+         _tag: "Error",
+@@ -107,7 +123,23 @@ export const run = () => {
+     socketPath,
+     token
+   }) => {
+-    process.on("message", request => spawn(socketPath, token, request));
++    process.on("message", request => {
++      if (request._tag === "Detach") detaching = true;else spawn(socketPath, token, request);
++    });
++    // An application that dies cannot release its commands, so they are ended here
++    process.on("disconnect", () => {
++      if (detaching) return;
++      for (const {
++        child,
++        leadsGroup
++      } of running.values()) {
++        try {
++          process.kill(leadsGroup ? -child.pid : child.pid, "SIGKILL");
++        } catch {
++          // It has already exited
++        }
++      }
++    });
+     send({
+       _tag: "Ready"
+     });
