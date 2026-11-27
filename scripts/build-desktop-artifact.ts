@@ -593,7 +593,7 @@ const desktopBuildInputArtifactNames = {
 const BUNDLE_SELF_CONTAINED_SENTINEL = "effect";
 
 const BUNDLE_SELF_CHECK_TIMEOUT = Duration.seconds(120);
-const WINDOWS_PRIMARY_NATIVE_PROBE_TIMEOUT = Duration.seconds(30);
+const WINDOWS_PRIMARY_NATIVE_PROBE_TIMEOUT = Duration.seconds(180);
 
 const WINDOWS_PRIMARY_FFF_PROBE_SOURCE = `
 const { join } = await import("node:path");
