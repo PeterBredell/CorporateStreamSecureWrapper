@@ -1221,7 +1221,7 @@ export interface DesktopBridge {
   onWindowFullscreenStateChange: (listener: (fullscreen: boolean) => void) => () => void;
   getWindowZoomFactor: () => number;
   /** Whether app windows are hidden from screen capture and screen sharing. */
-  getScreenCaptureProtection: () => Promise<boolean>;
+  getScreenCaptureProtection: () => Promise<{ enabled: boolean; supported: boolean }>;
   setScreenCaptureProtection: (enabled: boolean) => Promise<boolean>;
   getUpdateState: () => Promise<DesktopUpdateState>;
   /** `minimumVersion` is a track switch's checked release; nothing older is offered after. */

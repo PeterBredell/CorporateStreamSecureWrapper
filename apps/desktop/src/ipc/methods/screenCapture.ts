@@ -8,8 +8,12 @@ import * as ScreenCaptureProtection from "../../window/ScreenCaptureProtection.t
 export const getScreenCaptureProtection = DesktopIpc.makeIpcMethod({
   channel: IpcChannels.SCREEN_CAPTURE_GET_CHANNEL,
   payload: Schema.Void,
-  result: Schema.Boolean,
-  handler: () => Effect.sync(() => ScreenCaptureProtection.isScreenCaptureProtectionEnabled()),
+  result: Schema.Struct({ enabled: Schema.Boolean, supported: Schema.Boolean }),
+  handler: () =>
+    Effect.sync(() => ({
+      enabled: ScreenCaptureProtection.isScreenCaptureProtectionEnabled(),
+      supported: ScreenCaptureProtection.isScreenCaptureProtectionSupported(),
+    })),
 });
 
 export const setScreenCaptureProtection = DesktopIpc.makeIpcMethod({

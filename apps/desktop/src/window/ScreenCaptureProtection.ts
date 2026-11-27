@@ -8,6 +8,14 @@ import * as Electron from "electron";
  * the taskbar. Ctrl+Alt+Shift+T restores them. The preference persists in userData.
  */
 
+/**
+ * Only Windows and macOS can exclude a window from capture. On other platforms
+ * setContentProtection is a silent no-op, so the feature stays off and reports itself unsupported.
+ */
+export const isScreenCaptureProtectionSupported = (): boolean =>
+  // oxlint-disable-next-line t3code/no-global-process-runtime -- platform capability check in the main process
+  process.platform === "win32" || process.platform === "darwin";
+
 const SHOW_WINDOWS_SHORTCUT = "CommandOrControl+Alt+Shift+T";
 
 const SETTINGS_FILE = "screen-capture-protection.json";
@@ -60,12 +68,14 @@ const showAllWindows = (): void => {
 };
 
 export const isScreenCaptureProtectionEnabled = (): boolean => {
+  if (!isScreenCaptureProtectionSupported()) return false;
   enabled ??= load();
   return enabled;
 };
 
 /** Idempotent: applies the saved state and protects windows created later. */
 export const initScreenCaptureProtection = (): void => {
+  if (!isScreenCaptureProtectionSupported()) return;
   const value = isScreenCaptureProtectionEnabled();
   applyToAll(value);
   if (listening) return;
@@ -78,6 +88,7 @@ export const initScreenCaptureProtection = (): void => {
 };
 
 export const setScreenCaptureProtection = (value: boolean): void => {
+  if (!isScreenCaptureProtectionSupported()) return;
   enabled = value;
   save(value);
   applyToAll(value);

@@ -5,6 +5,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   SettingsIcon,
+  ShieldOffIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { T, useGT } from "gt-react";
@@ -181,12 +182,15 @@ function ScreenCaptureProtectionButton({ onBackdrop }: { onBackdrop: boolean }) 
   const gt = useGT();
   const bridge = window.desktopBridge;
   const [hidden, setHidden] = useState(false);
+  const [supported, setSupported] = useState(true);
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- mirrors the capture-protection flag owned by the Electron main process
   useEffect(() => {
     let cancelled = false;
-    void bridge?.getScreenCaptureProtection().then((value) => {
-      if (!cancelled) setHidden(value);
+    void bridge?.getScreenCaptureProtection().then((state) => {
+      if (cancelled) return;
+      setHidden(state.enabled);
+      setSupported(state.supported);
     });
     return () => {
       cancelled = true;
@@ -194,23 +198,29 @@ function ScreenCaptureProtectionButton({ onBackdrop }: { onBackdrop: boolean }) 
   }, [bridge]);
 
   if (!bridge) return null;
-  const label = hidden
+  const label = !supported
     ? gt(
-        "Hidden from screen capture and the taskbar (click to show). Ctrl+Alt+Shift+T brings the window back.",
+        "Hiding from screen capture is not available on this platform. This window is visible to screen sharing.",
       )
-    : gt("Visible to screen capture and the taskbar (click to hide)");
-  const Icon = hidden ? EyeOffIcon : EyeIcon;
+    : hidden
+      ? gt(
+          "Hidden from screen capture and the taskbar (click to show). Ctrl+Alt+Shift+T brings the window back.",
+        )
+      : gt("Visible to screen capture and the taskbar (click to hide)");
+  const Icon = !supported ? ShieldOffIcon : hidden ? EyeOffIcon : EyeIcon;
   return (
     <SharedTooltipTrigger
       render={
         <Button
           aria-label={label}
-          aria-pressed={hidden}
+          aria-disabled={!supported}
+          aria-pressed={supported ? hidden : undefined}
           className={cn(
             "[-webkit-app-region:no-drag]",
             onBackdrop && "relative top-auto translate-y-0",
           )}
           onClick={() => {
+            if (!supported) return;
             void bridge.setScreenCaptureProtection(!hidden).then(setHidden);
           }}
           size="icon-sm"
@@ -220,7 +230,7 @@ function ScreenCaptureProtectionButton({ onBackdrop }: { onBackdrop: boolean }) 
       label={label}
       side="bottom"
     >
-      <Icon className="size-3.5" />
+      <Icon className={cn("size-3.5", !supported && "opacity-60")} />
     </SharedTooltipTrigger>
   );
 }

@@ -400,6 +400,7 @@ export const make = Effect.gen(function* () {
           {
             label: m(msg("Hide from Screen Capture")),
             type: "checkbox",
+            enabled: ScreenCaptureProtection.isScreenCaptureProtectionSupported(),
             checked: ScreenCaptureProtection.isScreenCaptureProtectionEnabled(),
             click: () =>
               ScreenCaptureProtection.setScreenCaptureProtection(
