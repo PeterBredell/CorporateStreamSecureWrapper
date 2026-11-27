@@ -1,5 +1,12 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ChartNoAxesColumnIcon,
+  EyeIcon,
+  EyeOffIcon,
+  SettingsIcon,
+} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { T, useGT } from "gt-react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -82,6 +89,7 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
             <div className="hidden items-center md:flex">
               <HistoryNavigationButton direction="back" onBackdrop={backdropVariant !== null} />
               <HistoryNavigationButton direction="forward" onBackdrop={backdropVariant !== null} />
+              <ScreenCaptureProtectionButton onBackdrop={backdropVariant !== null} />
             </div>
           ) : null}
         </div>
@@ -118,7 +126,7 @@ export function SidebarBrandWidthProbe({
     >
       <div className="ml-[var(--workspace-titlebar-content-left)] flex gap-1">
         <SidebarBrandMark onBackdrop={false} />
-        {isElectron ? <div className="w-[calc(2*var(--workspace-titlebar-control-size))]" /> : null}
+        {isElectron ? <div className="w-[calc(3*var(--workspace-titlebar-control-size))]" /> : null}
       </div>
     </div>
   );
@@ -161,6 +169,53 @@ function HistoryNavigationButton({
           {shortcutLabel ? ` (${shortcutLabel})` : ""}
         </>
       }
+      side="bottom"
+    >
+      <Icon className="size-3.5" />
+    </SharedTooltipTrigger>
+  );
+}
+
+/** Toggles hiding every app window from screen capture and screen sharing (desktop only). */
+function ScreenCaptureProtectionButton({ onBackdrop }: { onBackdrop: boolean }) {
+  const gt = useGT();
+  const bridge = window.desktopBridge;
+  const [hidden, setHidden] = useState(false);
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- mirrors the capture-protection flag owned by the Electron main process
+  useEffect(() => {
+    let cancelled = false;
+    void bridge?.getScreenCaptureProtection().then((value) => {
+      if (!cancelled) setHidden(value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bridge]);
+
+  if (!bridge) return null;
+  const label = hidden
+    ? gt("Hidden from screen capture (click to show)")
+    : gt("Visible to screen capture (click to hide)");
+  const Icon = hidden ? EyeOffIcon : EyeIcon;
+  return (
+    <SharedTooltipTrigger
+      render={
+        <Button
+          aria-label={label}
+          aria-pressed={hidden}
+          className={cn(
+            "[-webkit-app-region:no-drag]",
+            onBackdrop && "relative top-auto translate-y-0",
+          )}
+          onClick={() => {
+            void bridge.setScreenCaptureProtection(!hidden).then(setHidden);
+          }}
+          size="icon-sm"
+          variant={onBackdrop ? "media-navigation" : hidden ? "secondary" : "ghost"}
+        />
+      }
+      label={label}
       side="bottom"
     >
       <Icon className="size-3.5" />

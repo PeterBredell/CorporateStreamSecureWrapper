@@ -17,6 +17,7 @@ import { applyLanguage, m, onLocaleChange } from "../i18n/messages.ts";
 import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
 import * as DesktopWindow from "./DesktopWindow.ts";
+import * as ScreenCaptureProtection from "./ScreenCaptureProtection.ts";
 
 export class DesktopApplicationMenuActionError extends Schema.TaggedError<DesktopApplicationMenuActionError>()(
   "DesktopApplicationMenuActionError",
@@ -209,6 +210,7 @@ export const make = Effect.gen(function* () {
   };
 
   const configure = Effect.gen(function* () {
+    ScreenCaptureProtection.initScreenCaptureProtection();
     const checkForUpdatesClick = () => {
       runMenuEffect("check-for-updates", handleCheckForUpdatesMenuClick);
     };
@@ -395,6 +397,15 @@ export const make = Effect.gen(function* () {
             click: zoomClick("out"),
           },
           { type: "separator" },
+          {
+            label: m(msg("Hide from Screen Capture")),
+            type: "checkbox",
+            checked: ScreenCaptureProtection.isScreenCaptureProtectionEnabled(),
+            click: () =>
+              ScreenCaptureProtection.setScreenCaptureProtection(
+                !ScreenCaptureProtection.isScreenCaptureProtectionEnabled(),
+              ),
+          },
           { role: "togglefullscreen", label: m(msg("Toggle Full Screen")) },
         ],
       },

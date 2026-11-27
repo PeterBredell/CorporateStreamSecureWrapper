@@ -39,6 +39,7 @@ import {
   installUpdate,
   setUpdateChannel,
 } from "./methods/updates.ts";
+import { getScreenCaptureProtection, setScreenCaptureProtection } from "./methods/screenCapture.ts";
 import {
   getAppBranding,
   getDatabaseMigrationProgress,
@@ -175,6 +176,8 @@ export const installDesktopIpcHandlers = Effect.fn("desktop.ipc.installHandlers"
   yield* ipc.handle(revealWindow);
   yield* ipc.handle(syncHtmlFullscreen);
   yield* ipc.handle(probeRemoteEditors);
+  yield* ipc.handle(getScreenCaptureProtection);
+  yield* ipc.handle(setScreenCaptureProtection);
   yield* ipc.handle(getUpdateState);
   yield* ipc.handle(setUpdateChannel);
   yield* ipc.handle(downloadUpdate);
