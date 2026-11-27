@@ -195,8 +195,10 @@ function ScreenCaptureProtectionButton({ onBackdrop }: { onBackdrop: boolean }) 
 
   if (!bridge) return null;
   const label = hidden
-    ? gt("Hidden from screen capture (click to show)")
-    : gt("Visible to screen capture (click to hide)");
+    ? gt(
+        "Hidden from screen capture and the taskbar (click to show). Ctrl+Alt+Shift+T brings the window back.",
+      )
+    : gt("Visible to screen capture and the taskbar (click to hide)");
   const Icon = hidden ? EyeOffIcon : EyeIcon;
   return (
     <SharedTooltipTrigger

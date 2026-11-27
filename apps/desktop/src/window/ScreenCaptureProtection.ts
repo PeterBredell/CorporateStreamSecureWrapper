@@ -4,12 +4,11 @@ import * as NodePath from "node:path";
 import * as Electron from "electron";
 
 /**
- * Hides every app window from screen capture and screen sharing.
- *
- * Electron maps `setContentProtection` to SetWindowDisplayAffinity on Windows
- * (WDA_EXCLUDEFROMCAPTURE on Windows 10 2004+, WDA_MONITOR before that) and to
- * NSWindowSharingNone on macOS. The preference persists in userData.
+ * Hides app windows from screen capture (setContentProtection) and, while on, from
+ * the taskbar. Ctrl+Alt+Shift+T restores them. The preference persists in userData.
  */
+
+const SHOW_WINDOWS_SHORTCUT = "CommandOrControl+Alt+Shift+T";
 
 const SETTINGS_FILE = "screen-capture-protection.json";
 
@@ -40,9 +39,23 @@ const save = (value: boolean): void => {
   }
 };
 
+const applyToWindow = (window: Electron.BrowserWindow, value: boolean): void => {
+  if (window.isDestroyed()) return;
+  window.setContentProtection(value);
+  window.setSkipTaskbar(value);
+};
+
 const applyToAll = (value: boolean): void => {
+  for (const window of Electron.BrowserWindow.getAllWindows()) applyToWindow(window, value);
+};
+
+/** Restores and focuses every window; the way back when there is no taskbar button. */
+const showAllWindows = (): void => {
   for (const window of Electron.BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) window.setContentProtection(value);
+    if (window.isDestroyed()) continue;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
   }
 };
 
@@ -58,8 +71,10 @@ export const initScreenCaptureProtection = (): void => {
   if (listening) return;
   listening = true;
   Electron.app.on("browser-window-created", (_event, window) => {
-    window.setContentProtection(isScreenCaptureProtectionEnabled());
+    applyToWindow(window, isScreenCaptureProtectionEnabled());
   });
+  Electron.globalShortcut.register(SHOW_WINDOWS_SHORTCUT, showAllWindows);
+  Electron.app.on("will-quit", () => Electron.globalShortcut.unregister(SHOW_WINDOWS_SHORTCUT));
 };
 
 export const setScreenCaptureProtection = (value: boolean): void => {
