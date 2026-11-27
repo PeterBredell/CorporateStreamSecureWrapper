@@ -7,9 +7,10 @@
 > Code. Problems with it must not be reported to T3 Tools, Inc. The official T3 Code is available only from
 > [t3.codes](https://t3.codes) and [github.com/pingdotgg/t3code](https://github.com/pingdotgg/t3code).
 >
-> **Branding status:** T3's [trademark policy](TRADEMARK.md) requires forks to use their own branding. This
-> fork's code, installer, window titles and icons **still contain T3 branding** and have not yet been replaced.
-> Treat this as a private experiment until that is done; do not present it as, or alongside, the official product.
+> **Branding status:** to follow T3's [trademark policy](TRADEMARK.md), this fork uses its own name
+> (ScreenShield), its own original logo and icons, its own app ID, and its own data folders, and shows an
+> "unofficial fork" notice inside the app. What still carries upstream names is listed under
+> [Remaining upstream branding](#remaining-upstream-branding).
 
 ScreenShield is a fork of the [T3 Code](https://github.com/pingdotgg/t3code) source code whose windows are **hidden from screen capture and
 screen sharing**, as one extra layer of protection for corporate use. When someone shares their screen,
@@ -19,7 +20,7 @@ the T3 window (and its taskbar button) are simply not in the picture.
 > On Linux the app runs normally, but the window is **visible to screen sharing**, and the app says so.
 > See [Linux](#linux) for why, and what could be done.
 
-The T3 Code name, wordmark, logos and icons are trademarks of T3 Tools, Inc. and are used here only to describe
+The T3 Code name, wordmark, logos and icons are trademarks of T3 Tools, Inc. and are used here only to say
 where the source code came from. The code is MIT-licensed (see [LICENSE](LICENSE)); the trademarks are not. Read
 [TRADEMARK.md](TRADEMARK.md) before distributing anything built from this repository.
 
@@ -59,14 +60,14 @@ where the source code came from. The code is MIT-licensed (see [LICENSE](LICENSE
 ## Install (Windows)
 
 1. Download `ScreenShield-unofficial-<version>-x64-windows.exe` from the
-   [Releases page](https://github.com/PeterBredell/t3code-screenshield/releases).
+   [Releases page](https://github.com/PeterBredell/CorporateStreamSecureWrapper/releases).
 2. Optionally verify the SHA-256 listed in the release notes (`certutil -hashfile <file> SHA256`).
 3. Run it. The installer is **not code-signed**, so Windows SmartScreen shows an "unknown publisher" warning.
    Click **More info → Run anyway**.
-4. Launch it from the Start menu. It still appears as "T3 Code" because the branding has not been replaced yet.
+4. Launch **ScreenShield** from the Start menu.
 
-> This build uses the same app identity as the official T3 Code, so installing it **replaces** an existing
-> official install on the same machine. Give the fork its own app ID and name first if both must coexist.
+> ScreenShield has its own app ID, install location and data folders (`%APPDATA%\screenshield` and
+> `~/.screenshield`), so it installs **alongside** an official T3 Code and never reads or overwrites its data. Give the fork its own app ID and name first if both must coexist.
 
 ## Using it
 
@@ -249,11 +250,35 @@ Also:
 
 - **The installer is unsigned.** Anyone distributing it widely should sign it with a code-signing
   certificate; SmartScreen will warn on every machine until then.
-- **Auto-update points at upstream T3.** The built-in updater is tied to upstream releases. Disable it, or
-  point it at your own release channel, before distributing broadly.
+- **Auto-update is off.** The updater only works when a build is given a publish repository, and these builds
+  are not, so there is no update feed. Users must install new versions by hand. (An earlier version of this
+  document said the updater pointed at upstream T3; that was wrong for these builds.)
 - **Hiding from the taskbar** makes the app less discoverable. That is intentional here, but make sure users
   know about `Ctrl+Alt+Shift+T`. If another program already uses that shortcut, registration silently fails.
 - Treat the setting file as user-editable: a user with local access can turn protection off.
+
+## Remaining upstream branding
+
+Done in this fork: the app name, window title, installer and file names, Start menu entry, logo and every icon
+(replaced with original artwork, including the web, dev and nightly sets), the in-app wordmark, the app ID, the
+data folders, and about 170 user-visible strings. An "unofficial fork" notice is shown permanently in the app's
+sidebar.
+
+Still inherited from upstream, on purpose or not yet cleaned up:
+
+- **`LICENSE`** keeps T3 Tools, Inc.'s copyright notice. The MIT license requires this.
+- **`TRADEMARK.md`** is T3's own policy text, kept so readers can read the rules.
+- **Internal names**: `@t3tools/*` package names, the bundled `t3` command, and similar identifiers.
+- **`apps/marketing`** (T3's marketing website, with their artwork and third-party images) and **`apps/mobile`**
+  (their mobile app) are inherited, unmodified, and are not part of the ScreenShield desktop app. They are
+  candidates for removal.
+- **Translations**: the string catalogs were not regenerated, so non-English languages fall back to English for
+  the strings that changed.
+- **Tests.** After the rebrand the desktop suite had 97 failures in 22 files. I fixed the ones the rebrand and
+  the screen-capture module caused (application menu, app identity, user-data paths, environment paths). About 80
+  failures remain (shell environment, Niri/Hyprland/KDE snapshot, CLI path, Clerk, updater and others). They look
+  like Windows-environment problems, but I did **not** compare against a pre-rebrand baseline, so treat that as
+  unverified. The web test suite has not been run.
 
 ## Project history
 
@@ -268,5 +293,8 @@ Built in a single working session:
 5. Added **taskbar hiding** and the **restore shortcut**.
 6. Made the app **honest on unsupported platforms** (Linux), researched what Linux would take, and wrote this
    document.
+7. After reading T3's trademark policy, **rebranded** as ScreenShield: new name, original logo and icons, own app
+   ID and data folders, an in-app "unofficial" notice, and a rewritten README. Renamed the repository to
+   `CorporateStreamSecureWrapper`. The first public release was withdrawn and rebuilt under the new branding.
 
 Most of the code was written with [Claude Code](https://claude.com/claude-code).

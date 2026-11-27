@@ -12,6 +12,9 @@ import { vi } from "vite-plus/test";
 
 vi.mock("electron", () => ({
   webContents: { getAllWebContents: vi.fn(() => []), getFocusedWebContents: vi.fn() },
+  BrowserWindow: { getAllWindows: vi.fn(() => []) },
+  app: { on: vi.fn(), getPath: vi.fn(() => "") },
+  globalShortcut: { register: vi.fn(), unregister: vi.fn() },
 }));
 
 import * as ElectronApp from "../electron/ElectronApp.ts";
@@ -38,7 +41,7 @@ const environmentInput = {
 
 const layerElectronApp = Layer.succeed(ElectronApp.ElectronApp, {
   metadata: Effect.die("unexpected metadata read"),
-  name: Effect.succeed("T3 Code"),
+  name: Effect.succeed("ScreenShield"),
   systemLocale: Effect.succeed("en-US"),
   preferredSystemLanguages: Effect.succeed(["en-US"]),
   whenReady: Effect.void,
